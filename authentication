@@ -1,0 +1,51 @@
+// Authentication Middleware
+func authMiddleware() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        tokenString := c.GetHeader("Authorization")
+        if tokenString == "" {
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header missing"})
+            return
+        }
+        token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+            return []byte(os.Getenv("JWT_SECRET")), nil
+        })
+        if err != nil || !token.Valid {
+            c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+            return
+        }
+        c.Next()
+    }
+}
+
+func createTask(c *gin.Context) {
+    var task Task
+    if err := c.ShouldBindJSON(&task); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        return
+    }
+    db.Create(&task)
+    c.JSON(http.StatusOK, task)
+}
+
+func getTasks(c *gin.Context) {
+    var tasks []Task
+    db.Find(&tasks)
+    c.JSON(http.StatusOK, tasks)
+}
+
+func handleWebSocket(c *gin.Context) {
+    conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to open WebSocket connection"})
+        return
+    }
+    defer conn.Close()
+
+    for {
+        _, msg, err := conn.ReadMessage()
+        if err != nil {
+            break
+        }
+        conn.WriteMessage(websocket.TextMessage, msg)
+    }
+}
