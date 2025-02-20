@@ -91,7 +91,7 @@ CREATE TABLE tasks (
 
 ## License
 
-This project is licensed under the MIT License.
+-------
 
 ---
 
