@@ -1,0 +1,40 @@
+// Frontend - Next.js + TypeScript + Tailwind CSS
+
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+export default function TaskDashboard() {
+    const [tasks, setTasks] = useState([]);
+
+    useEffect(() => {
+        fetchTasks();
+        const ws = new WebSocket('ws://localhost:8080/ws');
+        ws.onmessage = (event) => {
+            fetchTasks();
+        };
+        return () => ws.close();
+    }, []);
+
+    const fetchTasks = async () => {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('/tasks', {
+            headers: { Authorization: token }
+        });
+        setTasks(response.data);
+    };
+
+    return (
+        <div className="container mx-auto p-4">
+            <h1 className="text-2xl font-bold">Task Dashboard</h1>
+            <ul>
+                {tasks.map((task) => (
+                    <li key={task.ID} className="border-b py-2">
+                        <h2 className="text-xl">{task.Title}</h2>
+                        <p>{task.Description}</p>
+                        <p>Status: {task.Status}</p>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}
